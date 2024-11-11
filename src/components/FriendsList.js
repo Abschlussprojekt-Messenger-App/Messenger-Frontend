@@ -24,14 +24,19 @@ const FriendsList = ({ navigation }) => {
                 const user = await Auth.currentAuthenticatedUser();
                 const userData = await API.graphql(graphqlOperation(getUser, { id: user.username }));
                 setCurrentUser(userData.data.getUser);
-
-                if (userData.data.getUser.friends) {
-                    const friendPromises = userData.data.getUser.friends.map(friendId => 
-                        API.graphql(graphqlOperation(getUser, { id: friendId }))
+        
+                if (userData.data.getUser.friends && userData.data.getUser.friends.length > 0) {
+                    // Modified to handle array of usernames instead of IDs
+                    const friendPromises = userData.data.getUser.friends.map(friendUsername => 
+                        API.graphql(graphqlOperation(getUser, { id: friendUsername }))
                     );
                     const friendsData = await Promise.all(friendPromises);
-                    const friendsList = friendsData.map(friend => friend.data.getUser).filter(Boolean);
+                    const friendsList = friendsData
+                        .map(friend => friend.data.getUser)
+                        .filter(Boolean); // Remove any null values
                     setFriends(friendsList);
+                } else {
+                    setFriends([]);
                 }
             } catch (err) {
                 console.error('Error fetching user and friends:', err);
@@ -40,6 +45,7 @@ const FriendsList = ({ navigation }) => {
                 setLoading(false);
             }
         };
+        
 
         fetchCurrentUserAndFriends();
     }, []);
@@ -82,11 +88,15 @@ const FriendsList = ({ navigation }) => {
       
     
 
-    const renderFriendItem = ({ item }) => (
+      const renderFriendItem = ({ item }) => (
         <View style={styles.chatItem}>
             <TouchableOpacity 
                 style={styles.chatDetails}
-                onPress={() => console.log('Chat starten mit:', item.displayName || item.username)}
+                onPress={() => navigation.navigate('Chat', {
+                    friendUsername: item.username,
+                    friendName: item.displayName || item.username,
+                    friendEmail: item.email
+                })}
             >
                 <Text style={styles.chatName}>{item.displayName || item.username}</Text>
                 <Text style={styles.lastMessage}>{item.email}</Text>
@@ -99,6 +109,8 @@ const FriendsList = ({ navigation }) => {
             </TouchableOpacity>
         </View>
     );
+    
+    
     
 
     if (loading) {

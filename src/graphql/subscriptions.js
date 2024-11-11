@@ -88,3 +88,17 @@ export const onDeleteMessage = /* GraphQL */ `
     }
   }
 `;
+
+export const onNewMessage = /* GraphQL */ `
+  subscription OnNewMessage($receiverUsername: String!) {
+    onNewMessage(receiverUsername: $receiverUsername) {
+      id
+      username
+      message
+      receiverUsername
+      createdAt
+      status
+    }
+  }
+`;
+
