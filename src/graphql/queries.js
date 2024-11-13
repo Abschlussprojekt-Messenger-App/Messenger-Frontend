@@ -1,6 +1,40 @@
 /* eslint-disable */
 // this is an auto generated file. This will be overwritten
 
+export const listUserChats = /* GraphQL */ `
+  query ListUserChats($username: String!) {
+    listUserChats(username: $username) {
+      id
+      username
+      message
+      receiverUsername
+      createdAt
+      status
+      chatRoomId
+      updatedAt
+      __typename
+    }
+  }
+`;
+export const getChatRoomMessages = /* GraphQL */ `
+  query GetChatRoomMessages($chatRoomId: ID!, $limit: Int, $nextToken: String) {
+    getChatRoomMessages(
+      chatRoomId: $chatRoomId
+      limit: $limit
+      nextToken: $nextToken
+    ) {
+      id
+      username
+      message
+      receiverUsername
+      createdAt
+      status
+      chatRoomId
+      updatedAt
+      __typename
+    }
+  }
+`;
 export const getUser = /* GraphQL */ `
   query GetUser($id: ID!) {
     getUser(id: $id) {
@@ -43,7 +77,10 @@ export const getMessage = /* GraphQL */ `
       id
       username
       message
+      receiverUsername
       createdAt
+      status
+      chatRoomId
       updatedAt
       __typename
     }
@@ -60,7 +97,10 @@ export const listMessages = /* GraphQL */ `
         id
         username
         message
+        receiverUsername
         createdAt
+        status
+        chatRoomId
         updatedAt
         __typename
       }

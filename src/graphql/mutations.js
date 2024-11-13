@@ -7,8 +7,23 @@ export const addFriend = /* GraphQL */ `
   }
 `;
 export const unfriend = /* GraphQL */ `
-  mutation Unfriend($friendEmail: String!) {
-    unfriend(friendEmail: $friendEmail)
+  mutation Unfriend($userEmail: String!, $friendEmail: String!) {
+    unfriend(userEmail: $userEmail, friendEmail: $friendEmail)
+  }
+`;
+export const updateMessageStatus = /* GraphQL */ `
+  mutation UpdateMessageStatus($messageId: ID!, $status: MessageStatus!) {
+    updateMessageStatus(messageId: $messageId, status: $status) {
+      id
+      username
+      message
+      receiverUsername
+      createdAt
+      status
+      chatRoomId
+      updatedAt
+      __typename
+    }
   }
 `;
 export const createUser = /* GraphQL */ `
@@ -71,7 +86,10 @@ export const createMessage = /* GraphQL */ `
       id
       username
       message
+      receiverUsername
       createdAt
+      status
+      chatRoomId
       updatedAt
       __typename
     }
@@ -86,7 +104,10 @@ export const updateMessage = /* GraphQL */ `
       id
       username
       message
+      receiverUsername
       createdAt
+      status
+      chatRoomId
       updatedAt
       __typename
     }
@@ -101,7 +122,10 @@ export const deleteMessage = /* GraphQL */ `
       id
       username
       message
+      receiverUsername
       createdAt
+      status
+      chatRoomId
       updatedAt
       __typename
     }

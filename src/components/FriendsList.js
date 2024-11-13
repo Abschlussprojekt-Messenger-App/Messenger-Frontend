@@ -4,9 +4,7 @@ import { Auth, API, graphqlOperation } from 'aws-amplify';
 import styles from '../styles/HomePageStyle';
 import AntDesign from 'react-native-vector-icons/AntDesign';
 import Footer from './Footer';
-import { mutations } from '../graphql/mutations';
-
-// Import the necessary GraphQL query
+import * as mutations from '../graphql/mutations';
 import { getUser } from '../graphql/queries';
 
 const FriendsList = ({ navigation }) => {
@@ -16,6 +14,7 @@ const FriendsList = ({ navigation }) => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
+    // Fetch current user and friends list
     useEffect(() => {
         const fetchCurrentUserAndFriends = async () => {
             setLoading(true);
@@ -26,7 +25,6 @@ const FriendsList = ({ navigation }) => {
                 setCurrentUser(userData.data.getUser);
         
                 if (userData.data.getUser.friends && userData.data.getUser.friends.length > 0) {
-                    // Modified to handle array of usernames instead of IDs
                     const friendPromises = userData.data.getUser.friends.map(friendUsername => 
                         API.graphql(graphqlOperation(getUser, { id: friendUsername }))
                     );
@@ -46,10 +44,10 @@ const FriendsList = ({ navigation }) => {
             }
         };
         
-
         fetchCurrentUserAndFriends();
     }, []);
 
+    // Filter friends based on search query
     const filteredFriends = useMemo(() => {
         return friends.filter(friend => 
             (friend.displayName?.toLowerCase().includes(searchQuery.toLowerCase())) ||
@@ -57,38 +55,70 @@ const FriendsList = ({ navigation }) => {
         );
     }, [friends, searchQuery]);
 
+    // Handle unfriend action
     const handleUnfriend = async (friend) => {
         try {
-          console.log("Attempting to unfriend:", friend.email);
-          const result = await API.graphql(
-            graphqlOperation(mutations.unfriend, { friendEmail: friend.email })
-          );
-          console.log("Full unfriend result:", JSON.stringify(result, null, 2));
-          if (result.data && result.data.unfriend === true) {
-            console.log("Successfully unfriended");
-            setFriends(prevFriends => prevFriends.filter(f => f.id !== friend.id));
-            console.log(`You have unfriended ${friend.displayName || friend.username}.`);
-          } else {
-            console.error("Failed to unfriend. Result:", JSON.stringify(result, null, 2));
-            console.log("Failed to unfriend. Please try again.");
-          }
+            // Log: Freund, den wir entfreunden wollen
+            console.log("Attempting to unfriend friend:", friend);
+            console.log("Friend's email:", friend.email);  // Ausgabe der E-Mail des Freundes
+    
+            // Überprüfen, ob der aktuelle Benutzer und dessen E-Mail vorhanden sind
+            if (!currentUser || !currentUser.email) {
+                console.error("Current user's email is not available.");
+                setError("Current user's email is missing.");
+                return;
+            }
+    
+            // Log: Aktueller Benutzer und seine E-Mail
+            const currentUserEmail = currentUser.email;
+            console.log("Current user:", currentUser);
+            console.log("Current user's email:", currentUserEmail);  // Ausgabe der aktuellen Benutzer-E-Mail
+    
+            // Überprüfen, ob die E-Mail des Freundes vorhanden ist
+            if (!friend || !friend.email) {
+                console.error("Friend's email is not available.");
+                setError("Friend's email is missing.");
+                return;
+            }
+    
+            // Log: Daten, die an die Mutation übergeben werden
+            console.log("Calling unfriend mutation with the following data:");
+            console.log({
+                userEmail: currentUserEmail,   // Benutzer-E-Mail
+                friendEmail: friend.email      // Freundes-E-Mail
+            });
+    
+            // Mutation aufrufen
+            const result = await API.graphql(
+                graphqlOperation(mutations.unfriend, { 
+                    userEmail: currentUserEmail, 
+                    friendEmail: friend.email 
+                })
+            );
+    
+            // Log: Ergebnis der Mutation
+            console.log("Mutation result:", result); // Zeige das Ergebnis der Mutation an
+    
+            // Überprüfe das Ergebnis der Mutation
+            if (result && result.data && result.data.unfriend) {
+                console.log("Successfully unfriended friend:", friend.email);
+                setFriends(prevFriends => prevFriends.filter(f => f.id !== friend.id));
+            } else {
+                console.error("Unexpected response structure:", result);
+                setError("Unfriend failed. Please try again.");
+            }
         } catch (error) {
-          console.error("Error unfriending:", JSON.stringify(error, null, 2));
-          console.error("Error name:", error.name);
-          console.error("Error message:", error.message);
-          console.error("Error stack:", error.stack);
-          if (error.errors) {
-            console.error("GraphQL errors:", JSON.stringify(error.errors, null, 2));
-          }
-          console.log("An error occurred while trying to unfriend. Please try again.");
+            // Fehlerbehandlung
+            console.error("Error unfriending:", error);
+            setError(`An error occurred: ${error.message || 'Unknown error'}`);
         }
-      };
-      
-      
-      
+    };
+    
+    
     
 
-      const renderFriendItem = ({ item }) => (
+    // Render friend item in the list
+    const renderFriendItem = ({ item }) => (
         <View style={styles.chatItem}>
             <TouchableOpacity 
                 style={styles.chatDetails}
@@ -101,18 +131,17 @@ const FriendsList = ({ navigation }) => {
                 <Text style={styles.chatName}>{item.displayName || item.username}</Text>
                 <Text style={styles.lastMessage}>{item.email}</Text>
             </TouchableOpacity>
-            <TouchableOpacity 
-                style={styles.unfriendButton}
+            {/* Button to unfriend */}
+            <TouchableOpacity
                 onPress={() => handleUnfriend(item)}
+                style={styles.unfriendButton}
             >
-                <AntDesign name="close" size={24} color="red" />
+                <Text style={styles.unfriendText}>Unfriend</Text>
             </TouchableOpacity>
         </View>
     );
-    
-    
-    
 
+    // Loading state
     if (loading) {
         return (
             <View style={[styles.container, styles.centerContent]}>
@@ -121,8 +150,13 @@ const FriendsList = ({ navigation }) => {
         );
     }
 
+    // Error state
     if (error) {
-
+        return (
+            <View style={styles.container}>
+                <Text style={styles.errorText}>{error}</Text>
+            </View>
+        );
     }
 
     return (
@@ -156,8 +190,6 @@ const FriendsList = ({ navigation }) => {
             <Footer navigation={navigation} />
         </View>
     );
-
-    
 };
 
 export default FriendsList;
