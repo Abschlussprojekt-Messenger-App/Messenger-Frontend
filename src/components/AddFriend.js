@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { View, TextInput, FlatList, TouchableOpacity, Text, Alert, Button } from 'react-native';
 import { Auth, API, graphqlOperation } from 'aws-amplify';
 import { listUsers } from '../graphql/queries';
-import { addFriend } from '../graphql/mutations';
+import { addFriend, unfriend } from '../graphql/mutations';
 import styles from '../styles/HomePageStyle';
 
 const AddFriend = () => {
@@ -11,6 +11,7 @@ const AddFriend = () => {
     const [currentUserEmail, setCurrentUserEmail] = useState(null);
     const [selectedUser, setSelectedUser] = useState(null);
 
+    // Get current user's email
     useEffect(() => {
         const fetchCurrentUser = async () => {
             try {
@@ -21,10 +22,10 @@ const AddFriend = () => {
                 console.error('Error fetching current user:', error);
             }
         };
-        
         fetchCurrentUser();
     }, []);
 
+    // Fetch users based on search term
     const fetchUsers = useCallback(async (term) => {
         if (term) {
             try {
@@ -51,19 +52,19 @@ const AddFriend = () => {
         fetchUsers(searchTerm);
     }, [searchTerm, fetchUsers]);
 
+    // Function to add friend
     const addFriendMutation = async () => {
         if (!selectedUser || !currentUserEmail) {
             Alert.alert('Error', 'Bitte wählen Sie zuerst einen Benutzer aus.');
             return;
         }
-    
         try {
             console.log('Adding friend:', selectedUser.email);
             const response = await API.graphql(graphqlOperation(addFriend, {
                 userEmail: currentUserEmail,
                 friendEmail: selectedUser.email
             }));
-            console.log('Mutation response:', JSON.stringify(response, null, 2));
+            console.log('Add friend mutation response:', response);
             if (response.data && response.data.addFriend === true) {
                 Alert.alert('Success', 'Freund hinzugefügt!');
                 setSelectedUser(null);
@@ -74,13 +75,36 @@ const AddFriend = () => {
             }
         } catch (error) {
             console.error('Error adding friend:', error);
-            if (error.errors) {
-                console.error('GraphQL errors:', error.errors);
-            }
             Alert.alert('Error', 'Fehler beim Hinzufügen des Freundes.');
         }
     };
-    
+
+    // Function to remove friend
+    const removeFriendMutation = async () => {
+        if (!selectedUser || !currentUserEmail) {
+            Alert.alert('Error', 'Bitte wählen Sie zuerst einen Freund zum Entfernen aus.');
+            return;
+        }
+        try {
+            console.log('Removing friend:', selectedUser.email);
+            const response = await API.graphql(graphqlOperation(unfriend, {
+                userEmail: currentUserEmail,
+                friendEmail: selectedUser.email
+            }));
+            console.log('Remove friend mutation response:', response);
+            if (response.data && response.data.unfriend === true) {
+                Alert.alert('Success', 'Freund entfernt!');
+                setSelectedUser(null);
+                setSearchTerm('');
+            } else {
+                console.error('Error details:', response.errors);
+                Alert.alert('Error', 'Freund konnte nicht entfernt werden.');
+            }
+        } catch (error) {
+            console.error('Error removing friend:', error);
+            Alert.alert('Error', 'Fehler beim Entfernen des Freundes.');
+        }
+    };
 
     return (
         <View style={styles.container}>
@@ -106,11 +130,19 @@ const AddFriend = () => {
                 keyExtractor={item => item.id}
             />
             {selectedUser && (
-                <Button
-                    title={`Freund hinzufügen: ${selectedUser.email}`}
-                    onPress={addFriendMutation}
-                    disabled={!selectedUser}
-                />
+                <View style={styles.buttonContainer}>
+                    <Button
+                        title={`Freund hinzufügen: ${selectedUser.email}`}
+                        onPress={addFriendMutation}
+                        disabled={!selectedUser}
+                    />
+                    <Button
+                        title={`Freund entfernen: ${selectedUser.email}`}
+                        onPress={removeFriendMutation}
+                        color="red"
+                        disabled={!selectedUser}
+                    />
+                </View>
             )}
         </View>
     );
