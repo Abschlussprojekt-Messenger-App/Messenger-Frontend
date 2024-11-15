@@ -13,7 +13,7 @@ import styles from '../styles/HomePageStyle';
 import { listUsers } from '../graphql/queries';
 
 const HomePage = ({ navigation }) => {
-    const [chats, setChats] = useState([]);
+    const [chats, setChats] = useState([]); // Hier setzen wir 'chats' auf ein leeres Array
     const [currentUsername, setCurrentUsername] = useState('');
     const [searchQuery, setSearchQuery] = useState('');
 
@@ -44,36 +44,9 @@ const HomePage = ({ navigation }) => {
     };
 
     const fetchChats = async () => {
-        try {
-            const usersResult = await API.graphql({
-                query: listUsers,
-                authMode: 'AMAZON_COGNITO_USER_POOLS'
-            });
-
-            const chatList = usersResult.data.listUsers.items
-                .filter(user => user.username !== currentUsername)
-                .map(user => ({
-                    id: user.username,
-                    name: user.displayName || user.username
-                }));
-
-            setChats(chatList);
-        } catch (error) {
-            console.error('Error fetching chats:', error);
-        }
+        // Hier entfernen wir das Abrufen der Freunde, damit die Liste leer bleibt
+        setChats([]); // Setzt die chats auf ein leeres Array
     };
-
-    const renderItem = ({ item }) => (
-        <TouchableOpacity 
-            style={styles.chatItem} 
-            onPress={() => navigation.navigate('Chat', { 
-                friendUsername: item.id,
-                friendName: item.name
-            })} 
-        >
-            <Text style={styles.chatName}>{item.name}</Text>
-        </TouchableOpacity>
-    );
 
     return (
         <View style={styles.container}>
@@ -98,12 +71,18 @@ const HomePage = ({ navigation }) => {
                 </TouchableOpacity>
             </View>
 
+            {/* Leere FlatList, da keine Freunde angezeigt werden */}
+            {/* 
             <FlatList
                 data={filteredChats}
                 renderItem={renderItem}
                 keyExtractor={item => item.id}
                 style={styles.chatList}
             />
+            */}
+
+            {/* Das Hauptinhalt-Container nimmt den verbleibenden Platz ein */}
+            <View style={{ flex: 1 }} />
 
             <View style={styles.footer}>
                 <TouchableOpacity 
@@ -127,6 +106,7 @@ const HomePage = ({ navigation }) => {
                     <MaterialIcons name="settings" size={24} color="black" />
                     <Text style={styles.footerText}>Einstellungen</Text>
                 </TouchableOpacity>
+                {/* Wenn du keine Freunde sehen willst, entferne oder ändere diesen Button */}
                 <TouchableOpacity 
                     style={styles.footerItem} 
                     onPress={() => navigation.navigate('FriendsList')}

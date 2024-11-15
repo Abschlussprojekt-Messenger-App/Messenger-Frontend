@@ -5,7 +5,7 @@ import { listUsers } from '../graphql/queries';
 import { addFriend, unfriend } from '../graphql/mutations';
 import styles from '../styles/HomePageStyle';
 
-const AddFriend = () => {
+const FriendSettings = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [users, setUsers] = useState([]);
     const [currentUserEmail, setCurrentUserEmail] = useState(null);
@@ -148,4 +148,4 @@ const AddFriend = () => {
     );
 };
 
-export default AddFriend;
+export default FriendSettings;

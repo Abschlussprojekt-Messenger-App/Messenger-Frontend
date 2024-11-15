@@ -1,219 +1,131 @@
 import React, { useEffect, useState } from 'react';
-import { 
-    View, 
-    FlatList, 
-    TextInput, 
-    TouchableOpacity, 
-    Text, 
-    Alert,
-    RefreshControl 
-} from 'react-native';
-import { API, graphqlOperation, Auth } from 'aws-amplify';
-import { createMessage } from '../graphql/mutations';
-import { onNewMessage } from '../graphql/subscriptions';
-import styles from '../styles/ChatScreenStyle';
-
-
+import { View, Text, Button, ActivityIndicator, TextInput, FlatList, TouchableOpacity } from 'react-native';
+import { Auth, API, graphqlOperation } from 'aws-amplify';
+import { createMessage } from '../graphql/mutations'; // Mutation zum Senden von Nachrichten
+import { onNewMessage } from '../graphql/subscriptions'; // Subscription für Echtzeitnachrichten
 
 const ChatScreen = ({ route, navigation }) => {
-    const { friendUsername, friendName } = route.params;
+    const { friendUsername, friendName, chatRoomId } = route.params;
+
+    const [currentUser, setCurrentUser] = useState(null);
     const [messages, setMessages] = useState([]);
-    const [newMessage, setNewMessage] = useState('');
-    const [currentUsername, setCurrentUsername] = useState('');
-    const [refreshing, setRefreshing] = useState(false);
+    const [messageText, setMessageText] = useState('');
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
 
-    // Initial setup
     useEffect(() => {
-        navigation.setOptions({ title: friendName });
-        let subscription;
-
-        const initialize = async () => {
+        const fetchCurrentUser = async () => {
             try {
-                // Get current user
-                const userInfo = await Auth.currentAuthenticatedUser();
-                setCurrentUsername(userInfo.username);
-
-                // Fetch existing messages
-                await fetchMessages(userInfo.username);
-
-                // Set up subscription
-                subscription = await subscribeToNewMessages(userInfo.username);
-            } catch (error) {
-                console.error('Initialization error:', error);
+                const user = await Auth.currentAuthenticatedUser();
+                setCurrentUser(user);
+                console.log('Aktueller Benutzer:', user);
+            } catch (err) {
+                setError('Fehler beim Laden des Benutzers.');
+                console.error('Fehler beim Laden des Benutzers:', err);
+            } finally {
+                setLoading(false);
             }
         };
 
-        initialize();
+        fetchCurrentUser();
 
-        return () => {
-            if (subscription) {
-                subscription.unsubscribe();
-            }
-        };
-    }, []);
-
-    // Fetch messages when returning to screen
-    useEffect(() => {
-        const unsubscribe = navigation.addListener('focus', () => {
-            if (currentUsername) {
-                fetchMessages(currentUsername);
-            }
-        });
-
-        return unsubscribe;
-    }, [navigation, currentUsername]);
-
-    const fetchMessages = async (username) => {
-        try {
-            const messageData = await API.graphql(
-                graphqlOperation(`
-                    query GetMessages($receiverUsername: String!, $senderUsername: String!) {
-                        listMessages(filter: {
-                            or: [
-                                { and: [
-                                    { receiverUsername: { eq: $receiverUsername } },
-                                    { username: { eq: $senderUsername } }
-                                ]},
-                                { and: [
-                                    { receiverUsername: { eq: $senderUsername } },
-                                    { username: { eq: $receiverUsername } }
-                                ]}
-                            ]
-                        }) {
-                            items {
-                                id
-                                message
-                                username
-                                receiverUsername
-                                createdAt
-                                status
-                            }
-                        }
-                    }
-                `, {
-                    receiverUsername: friendUsername,
-                    senderUsername: username
-                })
-            );
-
-            const sortedMessages = messageData.data.listMessages.items.sort((a, b) =>
-                new Date(b.createdAt) - new Date(a.createdAt)
-            );
-
-            setMessages(sortedMessages);
-        } catch (error) {
-            console.error('Error fetching messages:', error);
-        }
-    };
-
-    const subscribeToNewMessages = (username) => {
-        console.log('Setting up subscription for:', username);
-        
-        return API.graphql(
-            graphqlOperation(onNewMessage, { receiverUsername: username })
-        ).subscribe({
-            next: ({ provider, value }) => {
-                console.log('Received new message:', value);
-                const newMessage = value.data.onNewMessage;
-                
-                // Only add message if it's from the current chat
-                if (newMessage.username === friendUsername || 
-                    (newMessage.receiverUsername === friendUsername && 
-                     newMessage.username === username)) {
-                    setMessages(prevMessages => [newMessage, ...prevMessages]);
-                }
-            },
-            error: error => console.warn('Subscription error:', error)
-        });
-    };
-
-    const handleSendMessage = async () => {
-        if (!newMessage.trim() || !currentUsername) return;
-
-        try {
-            const messageInput = {
-                input: {
-                    username: currentUsername,
-                    message: newMessage.trim(),
-                    receiverUsername: friendUsername,
-                    createdAt: new Date().toISOString(),
-                    status: 'SENT'
-                }
-            };
-
-            console.log('Sending message:', messageInput);
-
-            const result = await API.graphql(
-                graphqlOperation(createMessage, messageInput)
-            );
-
-            const sentMessage = result.data.createMessage;
-            setMessages(prevMessages => [sentMessage, ...prevMessages]);
-            setNewMessage('');
-
-            // Notify HomePage to refresh
-            navigation.setParams({ 
-                refresh: Date.now(),
-                previousScreen: 'Chat'
+        const subscription = API.graphql(graphqlOperation(onNewMessage, { chatRoomId }))
+            .subscribe({
+                next: ({ value }) => {
+                    const newMessage = value.data.onNewMessage;
+                    setMessages(prevMessages => [...prevMessages, newMessage]);
+                },
+                error: (err) => {
+                    console.error('Fehler bei der Echtzeitnachricht:', err);
+                    setError('Fehler beim Empfangen von Nachrichten.');
+                },
             });
 
-        } catch (error) {
-            console.error('Error sending message:', error);
-            Alert.alert('Error', 'Failed to send message');
+        // Clean-up der Subscription bei Verlassen des Screens
+        return () => subscription.unsubscribe();
+    }, [chatRoomId]);
+
+    // Funktion zum Senden von Nachrichten
+    const sendMessage = async () => {
+        if (!messageText.trim()) return; // Leere Nachrichten vermeiden
+
+        const input = {
+            chatRoomId,
+            username: currentUser.username,
+            message: messageText,
+            receiverUsername: friendUsername,
+            status: 'SENT',
+        };
+
+        try {
+            await API.graphql(graphqlOperation(createMessage, { input }));
+            console.log('Nachricht gesendet');
+            setMessageText(''); // Nachricht zurücksetzen
+        } catch (err) {
+            console.error('Fehler beim Senden der Nachricht:', err);
+            setError('Fehler beim Senden der Nachricht.');
         }
     };
 
-    const renderMessage = ({ item }) => {
-        const isCurrentUser = item.username === currentUsername;
+    if (loading) {
         return (
-            <View style={isCurrentUser ? styles.userMessage : styles.otherMessage}>
-                <Text style={styles.messageText}>{item.message}</Text>
-                <Text style={styles.messageTime}>
-                    {new Date(item.createdAt).toLocaleTimeString([], {
-                        hour: '2-digit',
-                        minute: '2-digit'
-                    })}
-                </Text>
+            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+                <ActivityIndicator size="large" color="#0000ff" />
             </View>
         );
-    };
+    }
+
+    if (error) {
+        return (
+            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+                <Text>{error}</Text>
+            </View>
+        );
+    }
 
     return (
-        <View style={styles.container}>
+        <View style={{ flex: 1, justifyContent: 'flex-end', padding: 10 }}>
+            <Text style={{ fontSize: 20, marginBottom: 10 }}>Chat mit {friendName || friendUsername}</Text>
+
+            {/* Nachrichtenanzeige */}
             <FlatList
                 data={messages}
-                renderItem={renderMessage}
-                keyExtractor={item => item.id}
-                inverted
-                contentContainerStyle={styles.messageList}
-                refreshControl={
-                    <RefreshControl
-                        refreshing={refreshing}
-                        onRefresh={() => {
-                            setRefreshing(true);
-                            fetchMessages(currentUsername).finally(() => {
-                                setRefreshing(false);
-                            });
-                        }}
-                    />
-                }
+                keyExtractor={(item) => item.id}
+                renderItem={({ item }) => (
+                    <View style={{ marginBottom: 10 }}>
+                        <Text>{item.username}: {item.message}</Text>
+                    </View>
+                )}
             />
-            <View style={styles.inputContainer}>
-                <TextInput
-                    style={styles.input}
-                    placeholder="Type a message..."
-                    value={newMessage}
-                    onChangeText={setNewMessage}
-                    multiline
-                />
-                <TouchableOpacity
-                    style={styles.sendButton}
-                    onPress={handleSendMessage}
-                    disabled={!newMessage.trim()}
-                >
-                    <Text style={styles.sendButtonText}>Send</Text>
-                </TouchableOpacity>
-            </View>
+
+            {/* Eingabefeld für neue Nachricht */}
+            <TextInput
+                style={{
+                    height: 40,
+                    borderColor: 'gray',
+                    borderWidth: 1,
+                    marginBottom: 10,
+                    paddingLeft: 10,
+                    borderRadius: 5,
+                }}
+                placeholder="Nachricht schreiben..."
+                value={messageText}
+                onChangeText={setMessageText}
+            />
+
+            {/* Button zum Senden der Nachricht */}
+            <TouchableOpacity
+                style={{
+                    backgroundColor: '#0084ff',
+                    paddingVertical: 10,
+                    paddingHorizontal: 20,
+                    borderRadius: 5,
+                    alignItems: 'center',
+                }}
+                onPress={sendMessage}
+            >
+                <Text style={{ color: 'white' }}>Senden</Text>
+            </TouchableOpacity>
         </View>
     );
 };

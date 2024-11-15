@@ -23,14 +23,18 @@ export const getChatRoomMessages = /* GraphQL */ `
       limit: $limit
       nextToken: $nextToken
     ) {
-      id
-      username
-      message
-      receiverUsername
-      createdAt
-      status
-      chatRoomId
-      updatedAt
+      items {
+        id
+        username
+        message
+        receiverUsername
+        createdAt
+        status
+        chatRoomId
+        updatedAt
+        __typename
+      }
+      nextToken
       __typename
     }
   }
@@ -101,6 +105,40 @@ export const listMessages = /* GraphQL */ `
         createdAt
         status
         chatRoomId
+        updatedAt
+        __typename
+      }
+      nextToken
+      __typename
+    }
+  }
+`;
+export const getChatRoom = /* GraphQL */ `
+  query GetChatRoom($id: ID!) {
+    getChatRoom(id: $id) {
+      id
+      chatRoomId
+      user1
+      user2
+      createdAt
+      updatedAt
+      __typename
+    }
+  }
+`;
+export const listChatRooms = /* GraphQL */ `
+  query ListChatRooms(
+    $filter: ModelChatRoomFilterInput
+    $limit: Int
+    $nextToken: String
+  ) {
+    listChatRooms(filter: $filter, limit: $limit, nextToken: $nextToken) {
+      items {
+        id
+        chatRoomId
+        user1
+        user2
+        createdAt
         updatedAt
         __typename
       }

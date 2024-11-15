@@ -9,7 +9,7 @@ import ChatScreen from '../components/ChatScreen';
 import SettingsPage from '../components/SettingsPage'; 
 import NewChatPage from '../components/NewChatPage';
 import FriendsList from '../components/FriendsList';
-import AddFriend from '../components/AddFriend';
+import FriendSettings from '../components/FriendSettings';
 
 const Stack = createNativeStackNavigator();
 
@@ -104,8 +104,8 @@ const AppNavigator = () => {
                 />
                 
                 <Stack.Screen 
-                    name="AddFriend" 
-                    component={AddFriend}
+                    name="FriendSettings" 
+                    component={FriendSettings}
                     options={{ title: 'Add Friend' }}
                 />
             </Stack.Navigator>

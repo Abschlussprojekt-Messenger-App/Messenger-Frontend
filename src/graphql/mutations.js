@@ -26,6 +26,19 @@ export const updateMessageStatus = /* GraphQL */ `
     }
   }
 `;
+export const createRoom = /* GraphQL */ `
+  mutation CreateRoom($input: ChatRoomInput!) {
+    createRoom(input: $input) {
+      id
+      chatRoomId
+      user1
+      user2
+      createdAt
+      updatedAt
+      __typename
+    }
+  }
+`;
 export const createUser = /* GraphQL */ `
   mutation CreateUser(
     $input: CreateUserInput!
@@ -126,6 +139,54 @@ export const deleteMessage = /* GraphQL */ `
       createdAt
       status
       chatRoomId
+      updatedAt
+      __typename
+    }
+  }
+`;
+export const createChatRoom = /* GraphQL */ `
+  mutation CreateChatRoom(
+    $input: CreateChatRoomInput!
+    $condition: ModelChatRoomConditionInput
+  ) {
+    createChatRoom(input: $input, condition: $condition) {
+      id
+      chatRoomId
+      user1
+      user2
+      createdAt
+      updatedAt
+      __typename
+    }
+  }
+`;
+export const updateChatRoom = /* GraphQL */ `
+  mutation UpdateChatRoom(
+    $input: UpdateChatRoomInput!
+    $condition: ModelChatRoomConditionInput
+  ) {
+    updateChatRoom(input: $input, condition: $condition) {
+      id
+      chatRoomId
+      user1
+      user2
+      createdAt
+      updatedAt
+      __typename
+    }
+  }
+`;
+export const deleteChatRoom = /* GraphQL */ `
+  mutation DeleteChatRoom(
+    $input: DeleteChatRoomInput!
+    $condition: ModelChatRoomConditionInput
+  ) {
+    deleteChatRoom(input: $input, condition: $condition) {
+      id
+      chatRoomId
+      user1
+      user2
+      createdAt
       updatedAt
       __typename
     }

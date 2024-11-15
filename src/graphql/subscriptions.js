@@ -121,3 +121,42 @@ export const onDeleteMessage = /* GraphQL */ `
     }
   }
 `;
+export const onCreateChatRoom = /* GraphQL */ `
+  subscription OnCreateChatRoom($filter: ModelSubscriptionChatRoomFilterInput) {
+    onCreateChatRoom(filter: $filter) {
+      id
+      chatRoomId
+      user1
+      user2
+      createdAt
+      updatedAt
+      __typename
+    }
+  }
+`;
+export const onUpdateChatRoom = /* GraphQL */ `
+  subscription OnUpdateChatRoom($filter: ModelSubscriptionChatRoomFilterInput) {
+    onUpdateChatRoom(filter: $filter) {
+      id
+      chatRoomId
+      user1
+      user2
+      createdAt
+      updatedAt
+      __typename
+    }
+  }
+`;
+export const onDeleteChatRoom = /* GraphQL */ `
+  subscription OnDeleteChatRoom($filter: ModelSubscriptionChatRoomFilterInput) {
+    onDeleteChatRoom(filter: $filter) {
+      id
+      chatRoomId
+      user1
+      user2
+      createdAt
+      updatedAt
+      __typename
+    }
+  }
+`;
