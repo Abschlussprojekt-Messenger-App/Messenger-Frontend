@@ -57,89 +57,57 @@ const FriendsList = ({ navigation }) => {
     
     const createChatRoomInDatabase = async (friendUsername) => {
         if (!currentUser) {
-            console.log("Kein aktueller Benutzer gefunden.");
+            console.error("Current user not found.");
             return;
         }
-    
-        console.log("Aktueller Benutzer:", currentUser.username);
-        console.log("Freund-Username:", friendUsername);
-    
-        // Generiere die ChatRoomId
-        const chatRoomId = `${currentUser.username}-${friendUsername}`;
-        console.log(`ChatRoomId generiert: ${chatRoomId}`);
-    
-        // Überprüfen, ob die ChatRoomId gültig ist
-        if (!chatRoomId) {
-            console.error("Fehler: ChatRoomId ist leer oder undefiniert.");
-            return;
-        }
-    
-        // Überprüfen, ob die Variablen korrekt gesetzt sind
-        if (!friendUsername || !currentUser.username) {
-            console.error("Fehler: Einer der Benutzernamen ist undefiniert.");
-            return;
-        }
-    
-        // API-Aufruf-Input vorbereiten
-        const input = {
-            chatRoomId,       // ID des Chatraums
-            user1: currentUser.username,  // Aktueller Benutzer
-            user2: friendUsername,  // Freund
-        };
-    
-        // Loggen des Inputs, bevor er an die API übergeben wird
-        console.log("API-Aufruf Input:", JSON.stringify(input, null, 2));
-    
-        // Überprüfen, ob alle Werte im Input definiert sind
-        if (!input.chatRoomId || !input.user1 || !input.user2) {
-            console.error("Fehler: Einer der Input-Werte ist undefiniert oder leer.");
-            return;
-        }
-    
-        // Stellen Sie sicher, dass `graphqlOperation` korrekt funktioniert
-        console.log("Bereite API-Aufruf vor...");
     
         try {
-            // API-Aufruf an die GraphQL-Mutation
-            console.log("Führe API.graphql Operation aus...");
-            const result = await API.graphql(graphqlOperation(createRoom, { input }));
+            // Erstelle den ChatRoom in der Datenbank
+            const result = await API.graphql(graphqlOperation(createRoom, {
+                user1: currentUser.username,
+                user2: friendUsername,
+            }));
     
-            // Erfolgreiche Antwort von der API
-            console.log("ChatRoom erfolgreich erstellt. Ergebnis:", JSON.stringify(result, null, 2));
+            const chatRoom = result.data.createRoom;
+            console.log("ChatRoom created successfully:", chatRoom);
     
+            // Navigiere zum ChatScreen und übergebe den ChatRoomId und FriendInfo
+            navigation.navigate('ChatScreen', {
+                chatRoomId: chatRoom.chatRoomId,  // Die ID des ChatRaums
+                friendUsername: friendUsername,   // Username des Freundes
+                friendName: chatRoom.user2 === friendUsername ? chatRoom.user1 : chatRoom.user2, // Name des Freundes (je nach Benutzer)
+            });
         } catch (err) {
-            // Fehler im API-Aufruf loggen
-            console.error("Fehler beim Erstellen des ChatRooms:", err);
-    
-            // Detailierte Fehlerbehandlung und Rückgabe des Fehlers
-            if (err.response) {
-                console.error("Fehlerantwort vom Server:", JSON.stringify(err.response, null, 2));
-            }
-            setError('Fehler beim Erstellen des Chatrooms.');
+            console.error("Error creating ChatRoom:", err);
+            setError('Error creating chat room.');
         }
     };
     
+        
     
-    
-    
+       
     
     const renderFriendItem = ({ item }) => {
         if (!currentUser || !item) {
             console.error('currentUser or item is undefined.');
             return null;
         }
-
+    
         const chatRoomId = `${currentUser.username}-${item.username}`;
         console.log('Generated chatRoomId:', chatRoomId);
-
+    
         return (
             <View style={styles.chatItem}>
                 <TouchableOpacity
                     style={styles.chatDetails}
                     onPress={async () => {
                         console.log('Navigating to Chat with:', item.username, chatRoomId);
-                        // Erstelle den Chatraum in der Datenbank und navigiere danach zum Chat
-                        await createChatRoomInDatabase(item.username);
+                        // Navigiere zum ChatScreen mit den richtigen Parametern
+                        navigation.navigate('Chat', {
+                            chatRoomId, 
+                            friendUsername: item.username, 
+                            friendName: item.displayName || item.username
+                        });
                     }}
                 >
                     <Text style={styles.chatName}>{item.displayName || item.username}</Text>
@@ -148,6 +116,7 @@ const FriendsList = ({ navigation }) => {
             </View>
         );
     };
+    
 
     if (loading) {
         return (
