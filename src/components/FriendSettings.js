@@ -3,9 +3,10 @@ import { View, TextInput, FlatList, TouchableOpacity, Text, Alert, Button } from
 import { Auth, API, graphqlOperation } from 'aws-amplify';
 import { listUsers } from '../graphql/queries';
 import { addFriend, unfriend } from '../graphql/mutations';
-import styles from '../styles/HomePageStyle';
+import styles from '../styles/FriendSettingsStyle';  // Achte auf den richtigen Import
+import Footer from '../components/Footer';
 
-const FriendSettings = () => {
+const FriendSettings = ({ navigation }) => {  // Navigation als Prop erhalten
     const [searchTerm, setSearchTerm] = useState('');
     const [users, setUsers] = useState([]);
     const [currentUserEmail, setCurrentUserEmail] = useState(null);
@@ -144,6 +145,8 @@ const FriendSettings = () => {
                     />
                 </View>
             )}
+            {/* Footer */}
+            <Footer navigation={navigation} />
         </View>
     );
 };

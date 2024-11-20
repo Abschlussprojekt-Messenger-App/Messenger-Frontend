@@ -39,6 +39,19 @@ export const getChatRoomMessages = /* GraphQL */ `
     }
   }
 `;
+export const getChatRoomByUsers = /* GraphQL */ `
+  query GetChatRoomByUsers($user1: String!, $user2: String!) {
+    getChatRoomByUsers(user1: $user1, user2: $user2) {
+      id
+      chatRoomId
+      user1
+      user2
+      createdAt
+      updatedAt
+      __typename
+    }
+  }
+`;
 export const getUser = /* GraphQL */ `
   query GetUser($id: ID!) {
     getUser(id: $id) {

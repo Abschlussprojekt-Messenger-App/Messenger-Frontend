@@ -26,18 +26,19 @@ export const updateMessageStatus = /* GraphQL */ `
     }
   }
 `;
-export const createRoom = /* GraphQL */ `
-  mutation CreateRoom($user1: String!, $user2: String!) {
-    createRoom(user1: $user1, user2: $user2) {
+export const createOrGetChatRoom = /* GraphQL */ `
+  mutation CreateOrGetChatRoom($user1: String!, $user2: String!) {
+    createOrGetChatRoom(user1: $user1, user2: $user2) {
       id
       chatRoomId
       user1
       user2
       createdAt
+      updatedAt
+      __typename
     }
   }
 `;
-
 export const createUser = /* GraphQL */ `
   mutation CreateUser(
     $input: CreateUserInput!

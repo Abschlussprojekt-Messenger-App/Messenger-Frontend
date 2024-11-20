@@ -122,8 +122,12 @@ export const onDeleteMessage = /* GraphQL */ `
   }
 `;
 export const onCreateChatRoom = /* GraphQL */ `
-  subscription OnCreateChatRoom($filter: ModelSubscriptionChatRoomFilterInput) {
-    onCreateChatRoom(filter: $filter) {
+  subscription OnCreateChatRoom(
+    $filter: ModelSubscriptionChatRoomFilterInput
+    $user1: String
+    $user2: String
+  ) {
+    onCreateChatRoom(filter: $filter, user1: $user1, user2: $user2) {
       id
       chatRoomId
       user1
@@ -135,8 +139,12 @@ export const onCreateChatRoom = /* GraphQL */ `
   }
 `;
 export const onUpdateChatRoom = /* GraphQL */ `
-  subscription OnUpdateChatRoom($filter: ModelSubscriptionChatRoomFilterInput) {
-    onUpdateChatRoom(filter: $filter) {
+  subscription OnUpdateChatRoom(
+    $filter: ModelSubscriptionChatRoomFilterInput
+    $user1: String
+    $user2: String
+  ) {
+    onUpdateChatRoom(filter: $filter, user1: $user1, user2: $user2) {
       id
       chatRoomId
       user1
@@ -148,8 +156,12 @@ export const onUpdateChatRoom = /* GraphQL */ `
   }
 `;
 export const onDeleteChatRoom = /* GraphQL */ `
-  subscription OnDeleteChatRoom($filter: ModelSubscriptionChatRoomFilterInput) {
-    onDeleteChatRoom(filter: $filter) {
+  subscription OnDeleteChatRoom(
+    $filter: ModelSubscriptionChatRoomFilterInput
+    $user1: String
+    $user2: String
+  ) {
+    onDeleteChatRoom(filter: $filter, user1: $user1, user2: $user2) {
       id
       chatRoomId
       user1

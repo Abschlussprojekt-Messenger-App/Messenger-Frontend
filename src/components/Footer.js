@@ -10,9 +10,9 @@ const Footer = ({ navigation }) => {
                 <MaterialIcons name="chat-bubble-outline" size={24} color="black" />
                 <Text style={styles.footerText}>Chats</Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => navigation.navigate('Calls')} style={styles.footerItem}>
-                <MaterialIcons name="call" size={24} color="black" />
-                <Text style={styles.footerText}>Anrufe</Text>
+            <TouchableOpacity style={styles.footerItem} onPress={() => navigation.navigate('FriendsList')}>
+                <MaterialIcons name="people" size={24} color="black" />
+                <Text style={styles.footerText}>Freunde</Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={() => navigation.navigate('Settings')} style={styles.footerItem}>
                 <MaterialIcons name="settings" size={24} color="black" />
