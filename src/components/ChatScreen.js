@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, FlatList, TextInput, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, FlatList, TextInput, TouchableOpacity, ActivityIndicator, ImageBackground } from 'react-native';
 import { Auth, API, graphqlOperation } from 'aws-amplify';
 import { createMessage } from '../graphql/mutations';
 import { onNewMessage } from '../graphql/subscriptions';
@@ -17,67 +17,54 @@ const ChatScreen = ({ route, navigation }) => {
   const [error, setError] = useState(null);  // Zustand für Fehlerbehandlung
 
   useEffect(() => {
-    // Funktion zum Abrufen des aktuell angemeldeten Benutzers
     const fetchCurrentUser = async () => {
       try {
-        const user = await Auth.currentAuthenticatedUser();  // Holt den aktuell angemeldeten Benutzer
+        const user = await Auth.currentAuthenticatedUser();
         setCurrentUser(user);
-        console.log('Aktueller Benutzer:', user);  // Protokollierung des Benutzers
 
-        // Abrufen der Benutzersession
-        const session = await Auth.currentSession();  // Hier rufen wir die vollständige Sitzung ab
-        console.log('Benutzersession:', session);  // Gibt die vollständige Session zurück, inkl. Tokens
-
+        const session = await Auth.currentSession();  
       } catch (err) {
         setError('Fehler beim Laden des Benutzers.');
-        console.error('Fehler beim Laden des Benutzers:', err);  // Fehlerprotokollierung
       } finally {
-        setLoading(false);  // Ladeanzeige beenden
+        setLoading(false); 
       }
     };
 
-    fetchCurrentUser();  // Benutzer laden, wenn der Bildschirm geladen wird
+    fetchCurrentUser();  
 
     const fetchMessages = async () => {
       try {
-        // Abrufen der Nachrichten für den ChatRoom
         const result = await API.graphql(graphqlOperation(getChatRoomMessages, { chatRoomId, limit: 20 }));
         const fetchedMessages = result.data.getChatRoomMessages.items;
         setMessages(fetchedMessages);
       } catch (err) {
-        console.error('Fehler beim Abrufen der Nachrichten:', err);
         setError('Fehler beim Laden der Nachrichten.');
       }
     };
 
-    fetchMessages();  // Nachrichten abrufen
+    fetchMessages();
 
-    // Echtzeit-Subscription für neue Nachrichten
     const subscription = API.graphql(graphqlOperation(onNewMessage, { chatRoomId })).subscribe({
       next: ({ value }) => {
         const newMessage = value.data.onNewMessage;
-        setMessages(prevMessages => [...prevMessages, newMessage]);  // Neue Nachricht zur Liste hinzufügen
+        setMessages(prevMessages => [...prevMessages, newMessage]);
       },
       error: (err) => {
-        console.error('Fehler bei der Echtzeitnachricht:', err);
         setError('Fehler beim Empfangen von Nachrichten.');
       },
     });
 
-    // Cleanup der Subscription beim Verlassen des Screens
     return () => subscription.unsubscribe();
   }, [chatRoomId]);
 
-  // Sicherstellen, dass die Nachrichten chronologisch sortiert werden
   const sortedMessages = messages.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
 
-  // Funktion zum Senden einer Nachricht
   const sendMessage = async () => {
-    if (!messageText.trim()) return;  // Verhindern, dass leere Nachrichten gesendet werden
+    if (!messageText.trim()) return;
 
     const input = {
       chatRoomId,
-      username: currentUser.username,  // Username des aktuellen Benutzers
+      username: currentUser.username,
       message: messageText,
       receiverUsername: friendUsername,
       status: 'SENT',
@@ -85,15 +72,12 @@ const ChatScreen = ({ route, navigation }) => {
 
     try {
       await API.graphql(graphqlOperation(createMessage, { input }));
-      console.log('Nachricht gesendet');
-      setMessageText('');  // Eingabefeld zurücksetzen
+      setMessageText('');
     } catch (err) {
-      console.error('Fehler beim Senden der Nachricht:', err);
       setError('Fehler beim Senden der Nachricht.');
     }
   };
 
-  // Wenn der Benutzer noch nicht geladen ist, zeige einen Ladeindikator
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -102,7 +86,6 @@ const ChatScreen = ({ route, navigation }) => {
     );
   }
 
-  // Wenn ein Fehler aufgetreten ist, zeige den Fehler an
   if (error) {
     return (
       <View style={styles.errorContainer}>
@@ -112,8 +95,7 @@ const ChatScreen = ({ route, navigation }) => {
   }
 
   return (
-    <View style={styles.container}>
-      {/* Header */}
+    <ImageBackground source={require('../../assets/background.jpg')} style={styles.container} imageStyle={styles.backgroundImage}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.navigate('Home')} style={styles.backButton}>
           <AntDesign name="arrowleft" size={24} color="#fff" />
@@ -121,7 +103,6 @@ const ChatScreen = ({ route, navigation }) => {
         <Text style={styles.headerTitle}>{friendName || friendUsername}</Text>
       </View>
 
-      {/* Nachrichtenanzeige */}
       <FlatList
         style={styles.messageList}
         data={sortedMessages}
@@ -140,7 +121,6 @@ const ChatScreen = ({ route, navigation }) => {
         )}
       />
 
-      {/* Eingabefeld für neue Nachricht */}
       <View style={styles.inputContainer}>
         <TextInput
           style={styles.input}
@@ -152,7 +132,7 @@ const ChatScreen = ({ route, navigation }) => {
           <AntDesign name="arrowup" size={20} color="#fff" />
         </TouchableOpacity>
       </View>
-    </View>
+    </ImageBackground>
   );
 };
 
