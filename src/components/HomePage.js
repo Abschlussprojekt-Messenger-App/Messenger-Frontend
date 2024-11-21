@@ -13,12 +13,19 @@ const HomePage = ({ navigation }) => {
 
   useEffect(() => {
     getCurrentUser();
-    fetchChatRooms();
   }, []);
 
+  useEffect(() => {
+    if (currentUsername) {
+      fetchChatRooms();
+    }
+  }, [currentUsername]);
+
+  // Hole den aktuellen Benutzer
   const getCurrentUser = async () => {
     try {
       const userInfo = await Auth.currentAuthenticatedUser();
+      console.log("Fetched current username:", userInfo.username);
       setCurrentUsername(userInfo.username);
     } catch (error) {
       console.error('Error getting current user:', error);
@@ -26,10 +33,15 @@ const HomePage = ({ navigation }) => {
     }
   };
 
+  // Hole alle ChatRooms des aktuellen Benutzers
   const fetchChatRooms = async () => {
+    if (!currentUsername) {
+      console.log("Waiting for currentUsername...");
+      return;
+    }
+
     setLoading(true);
     try {
-      // Verwende listChatRooms-Query, um ChatRooms des Benutzers zu holen
       const response = await API.graphql(
         graphqlOperation(listChatRooms, {
           filter: {
@@ -40,8 +52,11 @@ const HomePage = ({ navigation }) => {
           },
         })
       );
+      console.log("API response:", response);
       const rooms = response.data.listChatRooms.items;
-      setChatRooms(rooms);
+      console.log("Fetched chat rooms:", rooms);
+
+      setChatRooms(rooms); // Setze die gefundenen Räume in den Zustand
     } catch (error) {
       console.error('Error fetching chat rooms:', error);
     } finally {
@@ -49,9 +64,13 @@ const HomePage = ({ navigation }) => {
     }
   };
 
-  const handleChatRoomPress = (chatRoomId) => {
+  // Handler für den Klick auf einen ChatRoom
+  const handleChatRoomPress = (chatRoomId, user1, user2) => {
     // Navigiere zum ChatRoom mit der chatRoomId
-    navigation.navigate('Chat', { chatRoomId });
+    const friendUsername = user1 === currentUsername ? user2 : user1;
+    const friendName = friendUsername === user1 ? user2 : user1;
+
+    navigation.navigate('Chat', { chatRoomId, friendUsername, friendName });
   };
 
   return (
@@ -69,7 +88,7 @@ const HomePage = ({ navigation }) => {
         <FlatList
           data={chatRooms}
           renderItem={({ item }) => (
-            <TouchableOpacity onPress={() => handleChatRoomPress(item.chatRoomId)}>
+            <TouchableOpacity onPress={() => handleChatRoomPress(item.chatRoomId, item.user1, item.user2)}>
               <View style={styles.chatRoomItem}>
                 <Text style={styles.chatRoomName}>
                   {item.user1 === currentUsername ? item.user2 : item.user1}
@@ -81,6 +100,9 @@ const HomePage = ({ navigation }) => {
             </TouchableOpacity>
           )}
           keyExtractor={(item) => item.chatRoomId}
+          ListEmptyComponent={
+            <Text style={styles.emptyListText}>Keine ChatRooms vorhanden</Text>
+          }
         />
       )}
 
