@@ -10,35 +10,43 @@ import styles from '../styles/ChatScreenStyle';
 const ChatScreen = ({ route, navigation }) => {
   const { friendUsername, friendName, chatRoomId } = route.params;
 
-  const [currentUser, setCurrentUser] = useState(null);  // Zustand für den aktuellen Benutzer
-  const [messages, setMessages] = useState([]);  // Zustand für Nachrichten
-  const [messageText, setMessageText] = useState('');  // Zustand für Text in der Nachricht
-  const [loading, setLoading] = useState(true);  // Zustand für Ladeanzeige
-  const [error, setError] = useState(null);  // Zustand für Fehlerbehandlung
+  const [currentUser, setCurrentUser] = useState(null);
+  const [messages, setMessages] = useState([]);
+  const [messageText, setMessageText] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [nextToken, setNextToken] = useState(null);
 
   useEffect(() => {
     const fetchCurrentUser = async () => {
       try {
         const user = await Auth.currentAuthenticatedUser();
         setCurrentUser(user);
-
-        const session = await Auth.currentSession();  
       } catch (err) {
         setError('Fehler beim Laden des Benutzers.');
       } finally {
-        setLoading(false); 
+        setLoading(false);
       }
     };
 
-    fetchCurrentUser();  
+    fetchCurrentUser();
+  }, []);
+
+  useEffect(() => {
+    if (!chatRoomId) {
+      setError('Ungültige Chatroom-ID.');
+      return;
+    }
 
     const fetchMessages = async () => {
       try {
-        const result = await API.graphql(graphqlOperation(getChatRoomMessages, { chatRoomId, limit: 20 }));
+        const result = await API.graphql(graphqlOperation(getChatRoomMessages, { chatRoomId, limit: 20, nextToken }));
         const fetchedMessages = result.data.getChatRoomMessages.items;
-        setMessages(fetchedMessages);
+        setMessages(prevMessages => [...prevMessages, ...fetchedMessages]);
+        setNextToken(result.data.getChatRoomMessages.nextToken);
       } catch (err) {
-        setError('Fehler beim Laden der Nachrichten.');
+        console.error("Fehler beim Abrufen der Nachrichten:", err);
+        setError(`Fehler beim Laden der Nachrichten: ${err.message || err}`);
       }
     };
 
@@ -56,8 +64,6 @@ const ChatScreen = ({ route, navigation }) => {
 
     return () => subscription.unsubscribe();
   }, [chatRoomId]);
-
-  const sortedMessages = messages.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
 
   const sendMessage = async () => {
     if (!messageText.trim()) return;
@@ -105,7 +111,7 @@ const ChatScreen = ({ route, navigation }) => {
 
       <FlatList
         style={styles.messageList}
-        data={sortedMessages}
+        data={messages.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt))}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
           <View
@@ -119,6 +125,12 @@ const ChatScreen = ({ route, navigation }) => {
             <Text style={styles.messageText}>{item.message}</Text>
           </View>
         )}
+        onEndReached={() => {
+          if (nextToken) {
+            setNextToken(nextToken);
+          }
+        }}
+        onEndReachedThreshold={0.5}
       />
 
       <View style={styles.inputContainer}>
