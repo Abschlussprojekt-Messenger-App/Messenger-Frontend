@@ -3,14 +3,14 @@ import { View, FlatList, Text, TouchableOpacity, TextInput, ActivityIndicator } 
 import { Auth, API, graphqlOperation } from 'aws-amplify';
 import styles from '../styles/HomePageStyle';
 import Footer from './Footer';
-import { listChatRooms } from '../graphql/queries'; // Importiere die GraphQL-Query
-import { getUser } from '../graphql/queries'; // Importiere die getUser Query
-import { onCreateChatRoom } from '../graphql/subscriptions'; // Importiere die GraphQL-Subscription
+import { listChatRooms } from '../graphql/queries'; 
+import { getUser } from '../graphql/queries'; 
+import { onCreateChatRoom } from '../graphql/subscriptions'; 
 
 const HomePage = ({ navigation }) => {
   const [currentUsername, setCurrentUsername] = useState('');
   const [chatRooms, setChatRooms] = useState([]);
-  const [loading, setLoading] = useState(false); // Ladezustand für ChatRooms
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [usersDisplayNames, setUsersDisplayNames] = useState({});
 
