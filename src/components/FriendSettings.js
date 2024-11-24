@@ -3,7 +3,7 @@ import { View, TextInput, FlatList, TouchableOpacity, Text, Alert, Button } from
 import { Auth, API, graphqlOperation } from 'aws-amplify';
 import { listUsers } from '../graphql/queries';
 import { addFriend, unfriend } from '../graphql/mutations';
-import styles from '../styles/FriendSettingsStyle';  // Achte auf den richtigen Import
+import styles from '../styles/FriendSettingsStyle';  
 import Footer from '../components/Footer';
 
 const FriendSettings = ({ navigation }) => {  // Navigation als Prop erhalten

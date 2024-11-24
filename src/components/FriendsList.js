@@ -14,39 +14,49 @@ const FriendsList = ({ navigation }) => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
-    useEffect(() => {
-        const fetchCurrentUserAndFriends = async () => {
-            setLoading(true);
-            setError(null);
-            try {
-                const user = await Auth.currentAuthenticatedUser();
-                console.log('Current user:', user);
-                const userData = await API.graphql(graphqlOperation(getUser, { id: user.username }));
-                console.log('User data:', userData);
-                setCurrentUser(userData.data.getUser);
+    // Funktion zum Abrufen von Benutzerdaten und Freunden
+    const fetchCurrentUserAndFriends = async () => {
+        setLoading(true);
+        setError(null);
+        try {
+            const user = await Auth.currentAuthenticatedUser();
+            const userData = await API.graphql(graphqlOperation(getUser, { id: user.username }));
+            setCurrentUser(userData.data.getUser);
 
-                if (userData.data.getUser.friends && userData.data.getUser.friends.length > 0) {
-                    const friendPromises = userData.data.getUser.friends.map(friendUsername =>
-                        API.graphql(graphqlOperation(getUser, { id: friendUsername }))
-                    );
-                    const friendsData = await Promise.all(friendPromises);
-                    const friendsList = friendsData
-                        .map(friend => friend.data.getUser)
-                        .filter(Boolean);
-                    setFriends(friendsList);
-                } else {
-                    setFriends([]);
-                }
-            } catch (err) {
-                console.error('Error fetching user and friends:', err);
-                setError('Failed to load friends. Please try again.');
-            } finally {
-                setLoading(false);
+            if (userData.data.getUser.friends && userData.data.getUser.friends.length > 0) {
+                const friendPromises = userData.data.getUser.friends.map(friendUsername =>
+                    API.graphql(graphqlOperation(getUser, { id: friendUsername }))
+                );
+                const friendsData = await Promise.all(friendPromises);
+                const friendsList = friendsData
+                    .map(friend => friend.data.getUser)
+                    .filter(Boolean);
+                setFriends(friendsList);
+            } else {
+                setFriends([]);
             }
-        };
+        } catch (err) {
+            setError('Failed to load friends. Please try again.');
+        } finally {
+            setLoading(false);
+        }
+    };
 
+    // Lade die Liste beim ersten Rendern und wenn der Fokus zurückkehrt
+    useEffect(() => {
+        // Initiale Datenabfrage
         fetchCurrentUserAndFriends();
-    }, []);
+
+        // Den Fokuslistener hinzufügen, um beim Zurückkehren die Daten neu zu laden
+        const focusListener = navigation.addListener('focus', () => {
+            fetchCurrentUserAndFriends();
+        });
+
+        // Entfernen des Event-Listeners, wenn der Bildschirm nicht mehr im Fokus ist
+        return () => {
+            focusListener();
+        };
+    }, [navigation]);
 
     const filteredFriends = useMemo(() => {
         return friends.filter(friend => 
@@ -73,12 +83,6 @@ const FriendsList = ({ navigation }) => {
             const friend = friends.find(f => f.username === friendUsername);
             const friendName = friend ? friend.displayName : friendUsername;
 
-            console.log("Navigating to ChatScreen with:", {
-                chatRoomId: chatRoom.chatRoomId,
-                friendUsername,
-                friendName,
-            });
-
             navigation.navigate('Chat', {
                 chatRoomId: chatRoom.chatRoomId,
                 friendUsername,
@@ -92,17 +96,11 @@ const FriendsList = ({ navigation }) => {
     };
 
     const renderFriendItem = ({ item }) => {
-        if (!currentUser || !item) {
-            console.error('currentUser or item is undefined.');
-            return null;
-        }
-
         return (
             <View style={styles.chatItem}>
                 <TouchableOpacity
                     style={styles.chatDetails}
                     onPress={async () => {
-                        console.log('Navigating to Chat with:', item.username);
                         await createOrGetChatRoomInDatabase(item.username);
                     }}
                 >
