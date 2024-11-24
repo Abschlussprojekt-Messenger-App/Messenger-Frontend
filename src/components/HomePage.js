@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, FlatList, Text, TouchableOpacity, TextInput, ActivityIndicator } from 'react-native';
 import { Auth, API, graphqlOperation } from 'aws-amplify';
+import { useFocusEffect } from '@react-navigation/native';
 import styles from '../styles/HomePageStyle';
 import Footer from './Footer';
 import { listChatRooms } from '../graphql/queries'; 
@@ -14,76 +15,28 @@ const HomePage = ({ navigation }) => {
   const [error, setError] = useState(null);
   const [usersDisplayNames, setUsersDisplayNames] = useState({});
 
+  // Hole den aktuellen Benutzer
   useEffect(() => {
+    const getCurrentUser = async () => {
+      try {
+        const userInfo = await Auth.currentAuthenticatedUser();
+        console.log('Fetched current username:', userInfo.username);
+        setCurrentUsername(userInfo.username);
+      } catch (error) {
+        console.error('Error getting current user:', error);
+        navigation.navigate('Login');
+      }
+    };
+
     getCurrentUser();
   }, []);
 
-  useEffect(() => {
-    if (currentUsername) {
-      fetchChatRooms();
-    }
-
-    // Subscriben zu neuen Chatrooms
-    const subscription = API.graphql(graphqlOperation(onCreateChatRoom)).subscribe({
-      next: (eventData) => {
-        console.log('New chat room received from subscription:', eventData);
-        const newChatRoom = eventData.value.data.onCreateChatRoom;
-        
-        // Holen der DisplayName für die Benutzer im neuen Chatraum
-        const otherUser = newChatRoom.user1 === currentUsername ? newChatRoom.user2 : newChatRoom.user1;
-        API.graphql(graphqlOperation(getUser, { id: otherUser }))
-          .then((userData) => {
-            console.log('User data fetched for new chatroom user:', userData);
-            const friendDisplayName = userData.data.getUser.displayName;
-            setUsersDisplayNames((prevState) => ({
-              ...prevState,
-              [otherUser]: friendDisplayName,
-            }));
-          })
-          .catch((err) => {
-            console.error('Error fetching display name for user:', err);
-          });
-
-        // Füge den neuen Chatroom zu den bestehenden Chatrooms hinzu
-        setChatRooms((prevChatRooms) => {
-          console.log('Updating chat rooms with new room:', newChatRoom);
-          return [newChatRoom, ...prevChatRooms];
-        });
-        setLoading(false); // Setze das Loading auf false nach dem Hinzufügen des neuen Chatrooms
-      },
-      error: (err) => {
-        console.error('Error with subscription:', err);
-        setError('Error with subscription');
-        setLoading(false); // Wenn Fehler, lade nicht weiter
-      },
-    });
-
-    // Bereinige die Subscription beim Verlassen der Seite
-    return () => subscription.unsubscribe();
-  }, [currentUsername]);
-
-  // Hole den aktuellen Benutzer
-  const getCurrentUser = async () => {
-    try {
-      const userInfo = await Auth.currentAuthenticatedUser();
-      console.log("Fetched current username:", userInfo.username);
-      setCurrentUsername(userInfo.username);
-    } catch (error) {
-      console.error('Error getting current user:', error);
-      navigation.navigate('Login');
-    }
-  };
-
-  // Hole alle ChatRooms des aktuellen Benutzers und ihre DisplayNames
+  // Funktion zum Abrufen der ChatRooms und Benutzernamen
   const fetchChatRooms = async () => {
-    if (!currentUsername) {
-      console.log("Waiting for currentUsername...");
-      return;
-    }
+    if (!currentUsername) return;
 
-    setLoading(true); // Ladezustand aktivieren
-    console.log("Fetching chat rooms for user:", currentUsername);
-
+    setLoading(true);
+    console.log('Fetching chat rooms for user:', currentUsername);
     try {
       const response = await API.graphql(
         graphqlOperation(listChatRooms, {
@@ -95,38 +48,66 @@ const HomePage = ({ navigation }) => {
           },
         })
       );
-      console.log("Fetched chat rooms response:", response);
       const rooms = response.data.listChatRooms.items;
-      console.log("Fetched chat rooms:", rooms);
+      console.log('Fetched chat rooms:', rooms);
 
-      // Holen der DisplayName für user1 und user2
       const displayNamesPromises = rooms.map(async (room) => {
         const otherUser = room.user1 === currentUsername ? room.user2 : room.user1;
-        console.log(`Fetching display name for user: ${otherUser}`);
         const userData = await API.graphql(graphqlOperation(getUser, { id: otherUser }));
         return { [otherUser]: userData.data.getUser.displayName };
       });
 
       const displayNames = await Promise.all(displayNamesPromises);
       const displayNamesObj = displayNames.reduce((acc, item) => ({ ...acc, ...item }), {});
-      console.log('Display names fetched:', displayNamesObj);
 
       setUsersDisplayNames(displayNamesObj);
-      setChatRooms(rooms); // Setze die gefundenen Räume in den Zustand
-      setLoading(false); // Ladezustand deaktivieren
+      setChatRooms(rooms);
     } catch (error) {
       console.error('Error fetching chat rooms:', error);
       setError('Error fetching chat rooms');
-      setLoading(false); // Ladezustand deaktivieren bei Fehler
+    } finally {
+      setLoading(false);
     }
   };
+
+  // `useFocusEffect` sorgt dafür, dass fetchChatRooms bei jedem Fokussieren der Seite ausgeführt wird
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchChatRooms();
+    }, [currentUsername])
+  );
+
+  // Subscription für neue ChatRooms
+  useEffect(() => {
+    const subscription = API.graphql(graphqlOperation(onCreateChatRoom)).subscribe({
+      next: (eventData) => {
+        console.log('New chat room received from subscription:', eventData);
+        const newChatRoom = eventData.value.data.onCreateChatRoom;
+
+        const otherUser = newChatRoom.user1 === currentUsername ? newChatRoom.user2 : newChatRoom.user1;
+        API.graphql(graphqlOperation(getUser, { id: otherUser }))
+          .then((userData) => {
+            const friendDisplayName = userData.data.getUser.displayName;
+            setUsersDisplayNames((prevState) => ({
+              ...prevState,
+              [otherUser]: friendDisplayName,
+            }));
+          })
+          .catch((err) => console.error('Error fetching display name for user:', err));
+
+        setChatRooms((prevChatRooms) => [newChatRoom, ...prevChatRooms]);
+      },
+      error: (err) => console.error('Error with subscription:', err),
+    });
+
+    return () => subscription.unsubscribe();
+  }, [currentUsername]);
 
   // Funktion zur Handhabung des Klicks auf einen ChatRoom
   const handleChatRoomPress = (chatRoomId, user1, user2) => {
     console.log(`Navigating to chat room ${chatRoomId} between ${user1} and ${user2}`);
-    // Navigiere zum ChatRoom mit der chatRoomId
     const friendUsername = user1 === currentUsername ? user2 : user1;
-    const friendName = usersDisplayNames[friendUsername] || friendUsername; // Wenn DisplayName nicht vorhanden, den Username verwenden
+    const friendName = usersDisplayNames[friendUsername] || friendUsername;
 
     navigation.navigate('Chat', { chatRoomId, friendUsername, friendName });
   };
@@ -141,20 +122,18 @@ const HomePage = ({ navigation }) => {
       </View>
 
       {loading ? (
-        <ActivityIndicator size="large" color="#0000ff" /> // Ladeanzeige
+        <ActivityIndicator size="large" color="#0000ff" />
       ) : (
         <FlatList
           data={chatRooms}
           renderItem={({ item }) => {
             const friendUsername = item.user1 === currentUsername ? item.user2 : item.user1;
-            const friendDisplayName = usersDisplayNames[friendUsername] || friendUsername; // Anzeige des DisplayName, Fallback auf Username
+            const friendDisplayName = usersDisplayNames[friendUsername] || friendUsername;
 
             return (
               <TouchableOpacity onPress={() => handleChatRoomPress(item.chatRoomId, item.user1, item.user2)}>
                 <View style={styles.chatRoomItem}>
-                  <Text style={styles.chatRoomName}>
-                    {friendDisplayName}
-                  </Text>
+                  <Text style={styles.chatRoomName}>{friendDisplayName}</Text>
                   <Text style={styles.chatRoomDate}>
                     Erstellt am: {new Date(item.createdAt).toLocaleDateString('de-DE')}
                   </Text>
