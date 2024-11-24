@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, Button } from 'react-native';
+import { View, Image, Button } from 'react-native';
 import styles from '../styles/MainPageStyles';
 
 /**
@@ -10,7 +10,12 @@ import styles from '../styles/MainPageStyles';
 const MainPage = ({ navigation }) => {
     return (
         <View style={styles.container}>
-            <Text style={styles.title}>Keys</Text>
+            {/* Ersetze das Text-Element durch ein Image-Element */}
+            <Image 
+                source={require('../../assets/Logo.png')} 
+                style={styles.logo} 
+                resizeMode="contain" 
+            />
             <View style={styles.buttonContainer}>
                 <View style={styles.button}>
                     <Button title="Login" 
